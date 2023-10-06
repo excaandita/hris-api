@@ -14,4 +14,8 @@ class Responsibility extends Model
         'name',
         'role_id'
     ];
+
+    public function role() {
+        return $this->belongsTo(Role::class);
+    }
 }
