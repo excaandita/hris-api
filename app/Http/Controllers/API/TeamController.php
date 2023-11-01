@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateTeamRequest;
 use App\Http\Requests\UpdateTeamRequest;
 use App\Models\Team;
+use App\Models\Employee;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class TeamController extends Controller
 
             $team = Team::create([
                 'name' => $request->name,
-                'icon' => $path,
+                'icon' => isset($path) ? $path : '',
                 'company_id' => $request->company_id,
             ]);
 
@@ -65,7 +66,7 @@ class TeamController extends Controller
         $name = $request->input('name');
         $limit = $request->input('limit', 10);
 
-        $teamQuery = Team::query();
+        $teamQuery = Team::withCount('employees');
 
         if($id) {
             $team = $teamQuery->find($id);
@@ -100,6 +101,33 @@ class TeamController extends Controller
             $team->delete();
 
             return ResponseFormatter::success('Teams deleted');
+        } catch (Exception $th) {
+            return ResponseFormatter::error($th->getMessage(), 500);
+        }
+    }
+
+    public function teamDetail($id) {
+        try {
+            //declare var
+            $employees = [];
+            $message = 'Team Detail Not Found';
+
+            $teamQuery = Team::withCount('employees')->where('id', $id)->first();
+
+            if($teamQuery) {
+                $employees = Employee::with('role')->where('team_id', $teamQuery->id)->get();
+                $message = 'Teams Detail Found';
+            }
+
+            $result = [
+                'team' => $teamQuery,
+                'employees' => $employees
+            ];
+
+            return ResponseFormatter::success(
+                $result,
+                $message
+            );
         } catch (Exception $th) {
             return ResponseFormatter::error($th->getMessage(), 500);
         }
